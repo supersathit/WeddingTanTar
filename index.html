@@ -254,9 +254,21 @@ tailwind.config = {
   .slip-dialog {
     width:min(440px, calc(100% - 32px)); max-height:85svh; margin:auto;
     padding:28px; border:1px solid #E2B75C88; border-radius:24px;
-    background:#FBF7EF; color:#3B2A23; overflow-y:auto; overscroll-behavior:contain;
+    background:#FBF7EF; color:#3B2A23; overflow:hidden; overscroll-behavior:contain;
     box-shadow:0 24px 80px #21151055;
   }
+  .slip-dialog[open] { display:flex; flex-direction:column; }
+  .slip-dialog > .slip-heading { flex-shrink:0; }
+  .slip-dialog-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 4px 12px; }
+  .slip-dialog-actions {
+    flex-shrink:0; display:grid; grid-template-columns:1fr 1.4fr; gap:12px;
+    padding-top:16px; border-top:1px solid #E2B75C44; background:#FBF7EF;
+  }
+  .slip-dialog-actions button { min-height:48px; padding:12px; border-radius:99px; font-size:14px; }
+  #sendSlip { background:#FBCFE8; color:#500724; font-weight:600; }
+  #sendSlip:hover { background:#F9A8D4; }
+  #sendSlip:disabled { opacity:.5; cursor:wait; }
+  #slipDone { border:1px solid #5E3F3544; color:#5E3F35; }
   .slip-dialog::backdrop { background:#3B2A23BB; backdrop-filter:blur(5px); }
   .slip-dialog label { display:block; margin-top:20px; font-size:14px; }
   .slip-dialog input {
@@ -889,12 +901,13 @@ tailwind.config = {
 </section>
 
 <dialog id="slipDialog" class="slip-dialog" aria-labelledby="slipTitle" aria-describedby="slipNote">
-  <div class="flex items-center justify-between gap-4">
+  <div class="slip-heading flex items-center justify-between gap-4">
     <h2 id="slipTitle" class="text-2xl text-cocoa">แนบสลิปร่วมแสดงความยินดี</h2>
     <button id="closeSlip" type="button" class="shrink-0 w-10 h-10 text-3xl rounded-full" aria-label="ปิดหน้าต่างแนบสลิป">&times;</button>
   </div>
+  <div class="slip-dialog-body">
   <label for="slipName">ชื่อ–นามสกุล
-    <input id="slipName" name="slipName" type="text" autocomplete="name" placeholder="กรอกชื่อ–นามสกุลของท่าน" maxlength="150">
+    <input id="slipName" name="slipName" type="text" autocomplete="name" placeholder="กรอกชื่อ–นามสกุลของท่าน" maxlength="150" required>
   </label>
   <label for="slipFile">ไฟล์สลิป
     <input id="slipFile" name="slipFile" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" aria-describedby="slipFileHelp slipFileStatus">
@@ -902,8 +915,13 @@ tailwind.config = {
   <p id="slipFileHelp" class="mt-2 text-xs text-cocoa/70">รองรับ JPG, PNG, WebP หรือ PDF ขนาดไม่เกิน 10 MB</p>
   <p id="slipFileStatus" class="mt-3 text-sm break-words" role="status"></p>
   <img id="slipPreview" hidden alt="ตัวอย่างสลิปที่เลือก">
-  <p id="slipNote" class="mt-5 text-xs text-cocoa/70 leading-relaxed">ข้อมูลและไฟล์ที่เลือกยังไม่ถูกส่ง และจะหายเมื่อรีเฟรชหน้า</p>
-  <button id="slipDone" type="button" class="mt-5 w-full py-3 rounded-full bg-gold text-cocoaDk">ปิดหน้าต่าง</button>
+  <p id="slipNote" class="mt-5 text-xs text-cocoa/70 leading-relaxed">กรอกชื่อและเลือกสลิป แล้วกดส่งเพื่อแจ้งคู่บ่าวสาว</p>
+  <p id="slipSubmitStatus" class="mt-3 text-sm" role="status"></p>
+  </div>
+  <div class="slip-dialog-actions">
+    <button id="slipDone" type="button">ปิดหน้าต่าง</button>
+    <button id="sendSlip" type="button">ส่งสลิป</button>
+  </div>
 </dialog>
 
 <!-- ==================== FOOTER ==================== -->
@@ -933,7 +951,7 @@ tailwind.config = {
 <script>
 const HEART_PATH = 'M12 21s-7.5-4.6-9.6-9A5.4 5.4 0 0 1 12 6.5 5.4 5.4 0 0 1 21.6 12c-2.1 4.4-9.6 9-9.6 9z';
 
-/* Slip attachment picker. No upload endpoint is configured yet. */
+/* Slip attachment picker; submission is configured below. */
 const slipDialog = document.getElementById('slipDialog');
 const slipFile = document.getElementById('slipFile');
 const slipPreview = document.getElementById('slipPreview');
@@ -1358,7 +1376,85 @@ document.getElementById('copyBtn').addEventListener('click', event => {
 });
 
 /* ---------- RSVP → Google Sheets ---------- */
-const GAS_URL = 'https://script.google.com/macros/s/XXXXXXXX/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxl8Ci3362-RsC6Ms8AEevykrMM8FqCKXh7PKfwmwZHXqMQvnq0yjl1iqewS3l3LIsI/exec';
+
+// Keep the same request ID on a retry, but use a new one when data changes.
+const pendingRequests = new Map();
+function createRequestId() {
+  if (typeof globalThis.crypto?.randomUUID === 'function') return globalThis.crypto.randomUUID();
+  // randomUUID is unavailable on some phones and HTTP preview URLs.
+  const bytes = new Uint8Array(16);
+  if (typeof globalThis.crypto?.getRandomValues === 'function') {
+    globalThis.crypto.getRandomValues(bytes);
+    return Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('');
+  }
+  return `request-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`;
+}
+async function sendWeddingForm(payload) {
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[^/]+\/exec$/.test(GAS_URL) || GAS_URL.includes('XXXXXXXX')) {
+    throw new Error('ระบบยังไม่พร้อมรับข้อมูล กรุณาติดต่อคู่บ่าวสาว');
+  }
+  const fingerprint = JSON.stringify(payload);
+  let pending = pendingRequests.get(payload.type);
+  if (!pending || pending.fingerprint !== fingerprint) {
+    pending = {fingerprint, requestId:createRequestId()};
+    pendingRequests.set(payload.type, pending);
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90000);
+  try {
+    const response = await fetch(GAS_URL, {
+      method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({...payload, requestId:pending.requestId}),
+      signal:controller.signal, redirect:'follow', credentials:'omit'
+    });
+    if (!response.ok) throw new Error(`ระบบตอบกลับผิดพลาด (${response.status}) กรุณาติดต่อคู่บ่าวสาว`);
+    const result = await response.json();
+    if (result.ok !== true || result.requestId !== pending.requestId) throw new Error(result.message || 'ยังไม่ได้รับคำยืนยัน กรุณาลองอีกครั้ง');
+    pendingRequests.delete(payload.type);
+    return result.requestId;
+  } catch (error) {
+    console.error('Wedding form submission failed:', error.name, error.message);
+    if (error.name === 'AbortError') throw new Error('ระบบใช้เวลาตอบกลับนาน ยังยืนยันการบันทึกไม่ได้ กรุณากดส่งอีกครั้ง');
+    if (error instanceof TypeError) throw new Error('เบราว์เซอร์เชื่อมต่อระบบไม่ได้ กรุณาลองเปิดเว็บด้วย Chrome หรือ Safari แล้วส่งอีกครั้ง');
+    if (error instanceof SyntaxError) throw new Error('ระบบไม่ได้ตอบกลับเป็นข้อมูลที่ถูกต้อง กรุณาติดต่อคู่บ่าวสาวเพื่อตรวจสิทธิ์ Apps Script');
+    throw error;
+  } finally { clearTimeout(timer); }
+}
+
+document.getElementById('sendSlip').addEventListener('click', async event => {
+  const nameInput = document.getElementById('slipName');
+  const status = document.getElementById('slipSubmitStatus');
+  const file = slipFile.files[0];
+  if (!nameInput.reportValidity()) return;
+  if (!nameInput.value.trim()) { status.textContent = 'กรุณากรอกชื่อ–นามสกุล'; return; }
+  if (!file) { status.textContent = 'กรุณาเลือกไฟล์สลิป'; return; }
+  const button = event.currentTarget;
+  button.disabled = true;
+  nameInput.disabled = true;
+  slipFile.disabled = true;
+  button.textContent = 'กำลังส่งสลิป…';
+  status.textContent = '';
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result).split(',')[1]);
+      reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้ กรุณาเลือกไฟล์อีกครั้ง'));
+      reader.readAsDataURL(file);
+    });
+    await sendWeddingForm({type:'slip', name:nameInput.value.trim(), fileName:file.name, mimeType:file.type, base64});
+    status.textContent = 'ได้รับสลิปแล้ว ขอบคุณที่ร่วมแสดงความยินดีค่ะ';
+    nameInput.value = '';
+    slipFile.value = '';
+    slipFile.dispatchEvent(new Event('change'));
+  } catch (error) { status.textContent = error.message; }
+  finally {
+    button.disabled = false;
+    nameInput.disabled = false;
+    slipFile.disabled = false;
+    button.textContent = 'ส่งสลิป';
+  }
+});
 
 const rsvpForm = document.getElementById('rsvpForm');
 const sessionOptions = document.getElementById('sessionOptions');
@@ -1378,16 +1474,27 @@ document.getElementById('rsvpForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
   const r = btn.getBoundingClientRect();
+  const form = e.target;
+  const payload = {type:'rsvp', ...Object.fromEntries(new FormData(form))};
+  const message = document.getElementById('formMsg');
+  message.setAttribute('role', 'status');
+  message.classList.add('hidden');
+  const controls = [...form.querySelectorAll('input, textarea, button')];
+  const disabledStates = controls.map(control => control.disabled);
+  controls.forEach(control => { control.disabled = true; });
   btn.textContent = 'กำลังส่ง...'; btn.disabled = true;
   try {
-    await fetch(GAS_URL, { method:'POST', mode:'no-cors', body:new FormData(e.target) });
-    e.target.reset();
-    document.getElementById('formMsg').classList.remove('hidden');
-    btn.textContent = 'ส่งเรียบร้อย ✦';
+    const receipt = await sendWeddingForm(payload);
+    form.reset();
+    message.textContent = `บันทึกคำตอบแล้ว ขอบคุณค่ะ ✦ รหัสอ้างอิง: ${receipt}`;
     burstHearts(r.left + r.width/2, r.top);
-  } catch {
-    btn.textContent = 'ส่งไม่สำเร็จ ลองใหม่';
-    btn.disabled = false;
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    controls.forEach((control, index) => { control.disabled = disabledStates[index]; });
+    updateSessionOptions();
+    message.classList.remove('hidden');
+    btn.textContent = 'ส่งคำตอบรับ';
   }
 });
 </script>

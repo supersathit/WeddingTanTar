@@ -268,6 +268,13 @@ tailwind.config = {
   .slip-dialog.is-success .slip-dialog-actions { grid-template-columns:1fr; }
   .slip-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; border-radius:inherit; z-index:2; }
   .slip-confetti i { position:absolute; top:0; left:0; width:8px; height:13px; border-radius:2px; }
+  .rsvp-dialog { width:min(520px, calc(100% - 32px)); max-height:88svh; margin:auto; padding:0; border:1px solid #E2B75C88; border-radius:24px; background:#5E3F35; color:#FBF7EF; box-shadow:0 24px 80px #21151055; overflow:hidden; }
+  .rsvp-dialog[open] { display:flex; flex-direction:column; }
+  .rsvp-dialog::backdrop { background:#3B2A23BB; backdrop-filter:blur(5px); }
+  .rsvp-dialog-heading { flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 24px; border-bottom:1px solid #E2B75C33; }
+  .rsvp-dialog-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:24px; }
+  .rsvp-dialog :focus-visible { outline:2px solid #E2B75C; outline-offset:3px; }
+  html:has(.rsvp-dialog[open]) { overflow:hidden; }
   .slip-dialog > .slip-heading { flex-shrink:0; }
   .slip-dialog-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 4px 12px; }
   .slip-dialog-actions {
@@ -895,9 +902,21 @@ tailwind.config = {
   <h2 class="text-center font-display text-4xl md:text-5xl text-gold reveal">ตอบรับคำเชิญ</h2>
   <div class="w-16 h-px bg-gold/60 mx-auto mt-4 mb-4"></div>
   <p class="text-center text-sm text-ivory/70 reveal">กรุณาตอบรับภายในวันที่ 10 ตุลาคม 2569</p>
+  <div class="text-center mt-8">
+    <p class="text-sm text-ivory/80 mb-6">มาร่วมเป็นส่วนหนึ่งในวันสำคัญของเรา<br>พร้อมฝากคำอวยพรถึงเราสองคนได้ที่นี่ค่ะ</p>
+    <button type="button" data-open-rsvp class="px-8 py-3.5 rounded-full bg-gold text-cocoaDk text-sm">ตอบรับคำเชิญ</button>
+  </div>
+</section>
+<dialog id="rsvpDialog" class="rsvp-dialog" aria-labelledby="rsvpTitle" aria-describedby="rsvpNote">
+  <div class="rsvp-dialog-heading">
+    <h2 id="rsvpTitle" class="text-2xl text-gold">ตอบรับคำเชิญ</h2>
+    <button id="closeRsvp" type="button" class="w-10 h-10 shrink-0 text-3xl rounded-full" aria-label="ปิดหน้าต่างตอบรับคำเชิญ">&times;</button>
+  </div>
+  <div class="rsvp-dialog-body">
+  <p id="rsvpNote" class="text-center text-sm text-ivory/70">กรุณาตอบรับภายในวันที่ 10 ตุลาคม 2569</p>
 
-  <form id="rsvpForm" class="max-w-md mx-auto mt-10 space-y-4 reveal">
-    <input name="name" required placeholder="ชื่อ–นามสกุลของท่าน"
+  <form id="rsvpForm" class="max-w-md mx-auto mt-6 space-y-4">
+    <input name="name" required aria-label="ชื่อ–นามสกุลของท่าน" autocomplete="name" placeholder="ชื่อ–นามสกุลของท่าน"
            class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 placeholder-ivory/45 focus:outline-none focus:border-gold">
 
     <fieldset>
@@ -955,7 +974,8 @@ tailwind.config = {
     <button type="submit" class="w-full py-3.5 rounded-full bg-gold text-cocoaDk hover:bg-goldDk transition">ส่งคำตอบรับ</button>
     <p id="formMsg" class="text-center text-sm text-gold hidden">ขอบคุณค่ะ ✦ เราได้รับคำตอบของท่านแล้ว</p>
   </form>
-</section>
+  </div>
+</dialog>
 
 <section id="wishes" class="py-20 px-5 bg-surface">
   <div class="max-w-5xl mx-auto text-center">
@@ -1549,6 +1569,20 @@ document.getElementById('sendSlip').addEventListener('click', async event => {
 });
 
 const rsvpForm = document.getElementById('rsvpForm');
+const rsvpDialog = document.getElementById('rsvpDialog');
+let rsvpOpener;
+document.querySelectorAll('a[href="#rsvp"], [data-open-rsvp]').forEach(opener => {
+  opener.setAttribute('aria-haspopup', 'dialog');
+  opener.setAttribute('aria-controls', 'rsvpDialog');
+  opener.addEventListener('click', event => {
+    event.preventDefault();
+    rsvpOpener = opener;
+    rsvpDialog.showModal();
+    rsvpForm.elements.name.focus({preventScroll:true});
+  });
+});
+document.getElementById('closeRsvp').addEventListener('click', () => rsvpDialog.close());
+rsvpDialog.addEventListener('close', () => rsvpOpener?.focus({preventScroll:true}));
 const sessionOptions = document.getElementById('sessionOptions');
 const guestOptions = document.getElementById('guestOptions');
 function updateSessionOptions() {
@@ -1584,7 +1618,7 @@ document.getElementById('rsvpForm').addEventListener('submit', async e => {
     form.reset();
     if (payload.publishWish === 'yes' && payload.wish?.trim()) loadPublicWishes();
     message.textContent = `บันทึกคำตอบแล้ว ขอบคุณค่ะ ✦ รหัสอ้างอิง: ${receipt}`;
-    burstHearts(r.left + r.width/2, r.top);
+    if (rsvpDialog.open && !matchMedia('(prefers-reduced-motion: reduce)').matches) burstHearts(r.left + r.width/2, r.top, rsvpDialog);
   } catch (error) {
     message.textContent = error.message;
   } finally {
@@ -1592,6 +1626,7 @@ document.getElementById('rsvpForm').addEventListener('submit', async e => {
     updateSessionOptions();
     message.classList.remove('hidden');
     btn.textContent = 'ส่งคำตอบรับ';
+    if (rsvpDialog.open) message.scrollIntoView({block:'nearest', behavior:'instant'});
   }
 });
 /* Consented public wishes. Guest content is always rendered as plain text. */

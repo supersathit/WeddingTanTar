@@ -258,6 +258,15 @@ tailwind.config = {
     box-shadow:0 24px 80px #21151055;
   }
   .slip-dialog[open] { display:flex; flex-direction:column; }
+  .slip-thanks { padding:32px 4px; text-align:center; }
+  .slip-thanks[hidden] { display:none; }
+  .slip-thanks-heart { color:#C79A45; font-size:56px; line-height:1; margin-bottom:20px; }
+  .slip-thanks p { line-height:1.9; }
+  .slip-dialog.is-success .slip-dialog-body,
+  .slip-dialog.is-success #sendSlip { display:none; }
+  .slip-dialog.is-success .slip-dialog-actions { grid-template-columns:1fr; }
+  .slip-confetti { position:absolute; inset:0; overflow:hidden; pointer-events:none; border-radius:inherit; z-index:2; }
+  .slip-confetti i { position:absolute; top:0; left:0; width:8px; height:13px; border-radius:2px; }
   .slip-dialog > .slip-heading { flex-shrink:0; }
   .slip-dialog-body { min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:0 4px 12px; }
   .slip-dialog-actions {
@@ -741,64 +750,6 @@ tailwind.config = {
   <button id="lbClose" class="absolute top-5 right-6 text-ivory text-4xl">&times;</button>
 </div>
 
-<!-- ==================== RSVP ==================== -->
-<section id="rsvp" class="paper relative py-20 px-5 bg-cocoa text-ivory">
-  <h2 class="text-center font-display text-4xl md:text-5xl text-gold reveal">ตอบรับคำเชิญ</h2>
-  <div class="w-16 h-px bg-gold/60 mx-auto mt-4 mb-4"></div>
-  <p class="text-center text-sm text-ivory/70 reveal">กรุณาตอบรับภายในวันที่ 10 ตุลาคม 2569</p>
-
-  <form id="rsvpForm" class="max-w-md mx-auto mt-10 space-y-4 reveal">
-    <input name="name" required placeholder="ชื่อ–นามสกุลของท่าน"
-           class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 placeholder-ivory/45 focus:outline-none focus:border-gold">
-
-    <fieldset>
-      <legend class="text-sm mb-3">ท่านจะมาร่วมงานหรือไม่</legend>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <label class="rsvp-choice">
-          <input type="radio" name="attend" value="มา" required>
-          <span>ยินดีมาร่วมงาน</span>
-        </label>
-        <label class="rsvp-choice">
-          <input type="radio" name="attend" value="ไม่มา" required>
-          <span>ไม่สามารถมาร่วมงานได้</span>
-        </label>
-      </div>
-    </fieldset>
-
-    <fieldset id="guestOptions" hidden disabled>
-    <label class="block">
-      <span class="block text-sm mb-2">จำนวนผู้ร่วมงาน (รวมตัวท่าน)</span>
-      <input name="guests" type="number" min="1" max="20" value="1" placeholder="จำนวนคน"
-             class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 focus:outline-none focus:border-gold">
-    </label>
-    </fieldset>
-
-    <fieldset id="sessionOptions" hidden disabled>
-      <legend class="text-sm mb-3">ช่วงที่ร่วมงาน</legend>
-      <div class="grid gap-3">
-        <label class="rsvp-choice">
-          <input type="radio" name="session" value="ทั้งวัน" checked>
-          <span>ร่วมทั้งพิธี</span>
-        </label>
-        <label class="rsvp-choice">
-          <input type="radio" name="session" value="พิธีเช้า">
-          <span>เฉพาะพิธีเช้า</span>
-        </label>
-        <label class="rsvp-choice">
-          <input type="radio" name="session" value="งานเลี้ยง">
-          <span>เฉพาะรับประทานอาหาร</span>
-        </label>
-      </div>
-    </fieldset>
-
-    <textarea name="wish" rows="3" placeholder="คำอวยพรถึงบ่าวสาว"
-              class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 placeholder-ivory/45 focus:outline-none focus:border-gold"></textarea>
-
-    <button type="submit" class="w-full py-3.5 rounded-full bg-gold text-cocoaDk hover:bg-goldDk transition">ส่งคำตอบรับ</button>
-    <p id="formMsg" class="text-center text-sm text-gold hidden">ขอบคุณค่ะ ✦ เราได้รับคำตอบของท่านแล้ว</p>
-  </form>
-</section>
-
 <!-- ==================== VENUE ==================== -->
 <section id="venue" class="py-20 px-5 bg-cream">
   <h2 class="text-center font-display text-4xl md:text-5xl text-cocoa reveal">สถานที่จัดงาน</h2>
@@ -918,6 +869,12 @@ tailwind.config = {
   <p id="slipNote" class="mt-5 text-xs text-cocoa/70 leading-relaxed">กรอกชื่อและเลือกสลิป แล้วกดส่งเพื่อแจ้งคู่บ่าวสาว</p>
   <p id="slipSubmitStatus" class="mt-3 text-sm" role="status"></p>
   </div>
+  <div id="slipThanks" class="slip-thanks" hidden role="status">
+    <div class="slip-thanks-heart" aria-hidden="true">♡</div>
+    <p class="text-lg text-cocoa">ขอบคุณที่ร่วมแสดงความยินดี<br>และเป็นส่วนหนึ่งในวันสำคัญของเรา</p>
+    <p id="slipThanksNote" class="mt-4 text-sm text-cocoa/70">เราได้รับสลิปของท่านเรียบร้อยแล้วค่ะ</p>
+    <p class="mt-6 text-goldDk">ด้วยรักจาก ตาล &amp; ต้าร์</p>
+  </div>
   <div class="slip-dialog-actions">
     <button id="slipDone" type="button">ปิดหน้าต่าง</button>
     <button id="sendSlip" type="button">ส่งสลิป</button>
@@ -932,6 +889,85 @@ tailwind.config = {
     <span id="musicLabel">กำลังโหลดเพลง…</span>
   </button>
 </aside>
+<!-- ==================== RSVP ==================== -->
+<section id="rsvp" class="paper relative py-20 px-5 bg-cocoa text-ivory">
+  <h2 class="text-center font-display text-4xl md:text-5xl text-gold reveal">ตอบรับคำเชิญ</h2>
+  <div class="w-16 h-px bg-gold/60 mx-auto mt-4 mb-4"></div>
+  <p class="text-center text-sm text-ivory/70 reveal">กรุณาตอบรับภายในวันที่ 10 ตุลาคม 2569</p>
+
+  <form id="rsvpForm" class="max-w-md mx-auto mt-10 space-y-4 reveal">
+    <input name="name" required placeholder="ชื่อ–นามสกุลของท่าน"
+           class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 placeholder-ivory/45 focus:outline-none focus:border-gold">
+
+    <fieldset>
+      <legend class="text-sm mb-3">ท่านจะมาร่วมงานหรือไม่</legend>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <label class="rsvp-choice">
+          <input type="radio" name="attend" value="มา" required>
+          <span>ยินดีมาร่วมงาน</span>
+        </label>
+        <label class="rsvp-choice">
+          <input type="radio" name="attend" value="ไม่มา" required>
+          <span>ไม่สามารถมาร่วมงานได้</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset id="guestOptions" hidden disabled>
+    <label class="block">
+      <span class="block text-sm mb-2">จำนวนผู้ร่วมงาน (รวมตัวท่าน)</span>
+      <input name="guests" type="number" min="1" max="20" value="1" placeholder="จำนวนคน"
+             class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 focus:outline-none focus:border-gold">
+    </label>
+    </fieldset>
+
+    <fieldset id="sessionOptions" hidden disabled>
+      <legend class="text-sm mb-3">ช่วงที่ร่วมงาน</legend>
+      <div class="grid gap-3">
+        <label class="rsvp-choice">
+          <input type="radio" name="session" value="ทั้งวัน" checked>
+          <span>ร่วมทั้งพิธี</span>
+        </label>
+        <label class="rsvp-choice">
+          <input type="radio" name="session" value="พิธีเช้า">
+          <span>เฉพาะพิธีเช้า</span>
+        </label>
+        <label class="rsvp-choice">
+          <input type="radio" name="session" value="งานเลี้ยง">
+          <span>เฉพาะรับประทานอาหาร</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <textarea name="wish" rows="3" placeholder="คำอวยพรถึงบ่าวสาว"
+              class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 placeholder-ivory/45 focus:outline-none focus:border-gold"></textarea>
+
+    <label class="flex items-start gap-3 text-sm leading-relaxed">
+      <input id="publishWish" name="publishWish" type="checkbox" value="yes" class="mt-1 accent-gold">
+      <span>ยินยอมให้แสดงชื่อและคำอวยพรบนเว็บไซต์</span>
+    </label>
+    <div id="publicNameOptions" hidden>
+      <label for="publicName" class="block text-sm mb-2">ชื่อที่ต้องการแสดงบนเว็บไซต์ (ใช้ชื่อเล่นได้)</label>
+      <input id="publicName" name="publicName" maxlength="80" disabled class="w-full px-4 py-3 rounded-lg bg-ivory/10 border border-gold/30 focus:outline-none focus:border-gold">
+      <p class="mt-2 text-xs text-ivory/70">เมื่อเลือกยินยอม ชื่อที่ระบุและคำอวยพรจะปรากฏบนเว็บไซต์ทันทีหลังส่งสำเร็จ หากไม่เลือก ข้อความจะส่งถึงคู่บ่าวสาวเป็นการส่วนตัวค่ะ</p>
+    </div>
+    <button type="submit" class="w-full py-3.5 rounded-full bg-gold text-cocoaDk hover:bg-goldDk transition">ส่งคำตอบรับ</button>
+    <p id="formMsg" class="text-center text-sm text-gold hidden">ขอบคุณค่ะ ✦ เราได้รับคำตอบของท่านแล้ว</p>
+  </form>
+</section>
+
+<section id="wishes" class="py-20 px-5 bg-surface">
+  <div class="max-w-5xl mx-auto text-center">
+    <p class="text-goldDk text-sm mb-3">ถ้อยคำดี ๆ ในวันของเรา</p>
+    <h2 class="font-display text-3xl md:text-5xl text-cocoa">คำอวยพรถึงตาล–ต้าร์</h2>
+    <p class="mt-4 text-sm text-cocoa/70">ขอบคุณทุกความรักและความปรารถนาดีที่ส่งถึงเราสองคน</p>
+    <p id="wishesStatus" class="mt-10 text-sm text-cocoa/70" role="status">กำลังโหลดคำอวยพร…</p>
+    <div id="wishesCards" class="grid md:grid-cols-3 gap-5 mt-8 text-left" aria-label="คำอวยพรจากแขก"></div>
+    <button id="moreWishes" type="button" hidden class="mt-8 px-7 py-3 rounded-full border border-goldDk text-cocoa text-sm">อ่านคำอวยพรเพิ่มเติม</button>
+    <button id="retryWishes" type="button" hidden class="mt-6 px-7 py-3 rounded-full border border-goldDk text-cocoa text-sm">ลองโหลดอีกครั้ง</button>
+    <a href="#rsvp" class="block mt-8 text-sm text-cocoa underline underline-offset-4">ส่งคำอวยพรถึงเราสองคน</a>
+  </div>
+</section>
 <footer id="thanks" class="py-16 text-center bg-cream">
   <img src="logo.svg" alt="โลโก้งานแต่ง ณิชมนต์ และ สถิตย์" class="block w-28 h-auto mx-auto mb-4 object-contain">
   <p class="font-display text-3xl text-cocoa">ณิชมนต์ ทองแก้ว</p>
@@ -957,7 +993,52 @@ const slipFile = document.getElementById('slipFile');
 const slipPreview = document.getElementById('slipPreview');
 const slipFileStatus = document.getElementById('slipFileStatus');
 let slipPreviewUrl;
+let slipConfettiLayer;
+function clearSlipConfetti() {
+  if (!slipConfettiLayer) return;
+  slipConfettiLayer.getAnimations({subtree:true}).forEach(animation => animation.cancel());
+  slipConfettiLayer.remove();
+  slipConfettiLayer = null;
+}
+function celebrateSlip() {
+  clearSlipConfetti();
+  if (!slipDialog.open || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const layer = document.createElement('div');
+  layer.className = 'slip-confetti';
+  layer.setAttribute('aria-hidden', 'true');
+  slipDialog.appendChild(layer);
+  slipConfettiLayer = layer;
+  const width = layer.clientWidth;
+  const height = layer.clientHeight;
+  const colors = ['#E2B75C', '#C79A45', '#F7F1E6', '#F9A8D4', '#D9A87A'];
+  const animations = Array.from({length:60}, (_, index) => {
+    const piece = document.createElement('i');
+    piece.style.background = colors[index % colors.length];
+    if (index % 3 === 0) piece.style.borderRadius = '50%';
+    layer.appendChild(piece);
+    const fromLeft = index % 2 === 0;
+    const startX = fromLeft ? -10 : width + 10;
+    const peakX = width * (.15 + Math.random() * .7);
+    const endX = peakX + (Math.random() - .5) * width * .65;
+    const rotation = (Math.random() - .5) * 1080;
+    return piece.animate([
+      {transform:`translate(${startX}px, ${height * .65}px) rotate(0deg)`, opacity:0},
+      {opacity:1, offset:.08},
+      {transform:`translate(${peakX}px, ${height * (.02 + Math.random() * .2)}px) rotate(${rotation * .4}deg)`, opacity:1, offset:.35},
+      {transform:`translate(${endX}px, ${height + 20}px) rotate(${rotation}deg)`, opacity:0}
+    ], {duration:2200 + Math.random() * 1000, delay:Math.random() * 350, easing:'ease-out', fill:'both'});
+  });
+  Promise.allSettled(animations.map(animation => animation.finished)).then(() => {
+    layer.remove();
+    if (slipConfettiLayer === layer) slipConfettiLayer = null;
+  });
+}
 document.getElementById('openSlip').addEventListener('click', () => {
+  clearSlipConfetti();
+  slipDialog.classList.remove('is-success');
+  document.getElementById('slipThanks').hidden = true;
+  document.getElementById('slipTitle').textContent = 'แนบสลิปร่วมแสดงความยินดี';
+  slipDialog.setAttribute('aria-describedby', 'slipNote');
   slipDialog.showModal();
   document.getElementById('slipName').focus({preventScroll:true});
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -967,7 +1048,10 @@ document.getElementById('openSlip').addEventListener('click', () => {
 });
 document.getElementById('closeSlip').addEventListener('click', () => slipDialog.close());
 document.getElementById('slipDone').addEventListener('click', () => slipDialog.close());
-slipDialog.addEventListener('close', () => document.getElementById('openSlip').focus({preventScroll:true}));
+slipDialog.addEventListener('close', () => {
+  clearSlipConfetti();
+  document.getElementById('openSlip').focus({preventScroll:true});
+});
 slipFile.addEventListener('change', () => {
   if (slipPreviewUrl) URL.revokeObjectURL(slipPreviewUrl);
   slipPreviewUrl = null;
@@ -1412,7 +1496,7 @@ async function sendWeddingForm(payload) {
     const result = await response.json();
     if (result.ok !== true || result.requestId !== pending.requestId) throw new Error(result.message || 'ยังไม่ได้รับคำยืนยัน กรุณาลองอีกครั้ง');
     pendingRequests.delete(payload.type);
-    return result.requestId;
+    return /^\d{5}$/.test(result.receiptId || '') ? result.receiptId : result.requestId;
   } catch (error) {
     console.error('Wedding form submission failed:', error.name, error.message);
     if (error.name === 'AbortError') throw new Error('ระบบใช้เวลาตอบกลับนาน ยังยืนยันการบันทึกไม่ได้ กรุณากดส่งอีกครั้ง');
@@ -1442,11 +1526,18 @@ document.getElementById('sendSlip').addEventListener('click', async event => {
       reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้ กรุณาเลือกไฟล์อีกครั้ง'));
       reader.readAsDataURL(file);
     });
-    await sendWeddingForm({type:'slip', name:nameInput.value.trim(), fileName:file.name, mimeType:file.type, base64});
-    status.textContent = 'ได้รับสลิปแล้ว ขอบคุณที่ร่วมแสดงความยินดีค่ะ';
+    const receipt = await sendWeddingForm({type:'slip', name:nameInput.value.trim(), fileName:file.name, mimeType:file.type, base64});
+    status.textContent = '';
     nameInput.value = '';
     slipFile.value = '';
     slipFile.dispatchEvent(new Event('change'));
+    document.getElementById('slipTitle').textContent = 'ขอบคุณจากใจ';
+    document.getElementById('slipThanksNote').textContent = `เราได้รับสลิปของท่านเรียบร้อยแล้วค่ะ · รหัสอ้างอิง: ${receipt}`;
+    slipDialog.classList.add('is-success');
+    document.getElementById('slipThanks').hidden = false;
+    slipDialog.setAttribute('aria-describedby', 'slipThanksNote');
+    celebrateSlip();
+    if (slipDialog.open) document.getElementById('slipDone').focus({preventScroll:true});
   } catch (error) { status.textContent = error.message; }
   finally {
     button.disabled = false;
@@ -1460,6 +1551,10 @@ const rsvpForm = document.getElementById('rsvpForm');
 const sessionOptions = document.getElementById('sessionOptions');
 const guestOptions = document.getElementById('guestOptions');
 function updateSessionOptions() {
+  const publish = document.getElementById('publishWish').checked;
+  document.getElementById('publicNameOptions').hidden = !publish;
+  document.getElementById('publicName').disabled = !publish;
+  document.getElementById('publicName').required = publish;
   const attending = rsvpForm.querySelector('input[name="attend"]:checked')?.value === 'มา';
   sessionOptions.hidden = !attending;
   sessionOptions.disabled = !attending;
@@ -1486,6 +1581,7 @@ document.getElementById('rsvpForm').addEventListener('submit', async e => {
   try {
     const receipt = await sendWeddingForm(payload);
     form.reset();
+    if (payload.publishWish === 'yes' && payload.wish?.trim()) loadPublicWishes();
     message.textContent = `บันทึกคำตอบแล้ว ขอบคุณค่ะ ✦ รหัสอ้างอิง: ${receipt}`;
     burstHearts(r.left + r.width/2, r.top);
   } catch (error) {
@@ -1497,6 +1593,61 @@ document.getElementById('rsvpForm').addEventListener('submit', async e => {
     btn.textContent = 'ส่งคำตอบรับ';
   }
 });
+/* Consented public wishes. Guest content is always rendered as plain text. */
+let publicWishes = [];
+let wishesShown = 0;
+function showMoreWishes() {
+  const cards = document.getElementById('wishesCards');
+  publicWishes.slice(wishesShown, wishesShown + 3).forEach(item => {
+    const card = document.createElement('blockquote');
+    card.className = 'bg-ivory rounded-2xl p-6 border border-gold/30 shadow-sm';
+    const heart = document.createElement('span');
+    heart.className = 'text-goldDk text-3xl';
+    heart.textContent = '♡';
+    heart.setAttribute('aria-hidden', 'true');
+    const wish = document.createElement('p');
+    wish.className = 'mt-3 text-sm text-cocoa leading-loose whitespace-pre-wrap break-words';
+    wish.textContent = item.wish;
+    const name = document.createElement('footer');
+    name.className = 'mt-5 text-sm text-goldDk break-words';
+    name.textContent = `จาก ${item.name}`;
+    card.append(heart, wish, name);
+    cards.appendChild(card);
+  });
+  wishesShown = Math.min(wishesShown + 3, publicWishes.length);
+  document.getElementById('moreWishes').hidden = wishesShown >= publicWishes.length;
+}
+async function loadPublicWishes() {
+  const status = document.getElementById('wishesStatus');
+  const retry = document.getElementById('retryWishes');
+  retry.hidden = true;
+  status.textContent = 'กำลังโหลดคำอวยพร…';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 20000);
+  try {
+    const response = await fetch(`${GAS_URL}?action=wishes`, {signal:controller.signal, credentials:'omit', redirect:'follow'});
+    if (!response.ok) throw new Error('load failed');
+    const result = await response.json();
+    if (result.ok !== true || !Array.isArray(result.wishes)) throw new Error('invalid response');
+    publicWishes = result.wishes.filter(item => item && typeof item.name === 'string' && typeof item.wish === 'string');
+    wishesShown = 0;
+    document.getElementById('wishesCards').replaceChildren();
+    status.textContent = publicWishes.length ? '' : 'พื้นที่เล็ก ๆ แห่งนี้ รอเก็บคำอวยพรและความทรงจำดี ๆ จากทุกคนค่ะ';
+    showMoreWishes();
+  } catch (error) {
+    status.textContent = 'ขณะนี้ยังโหลดคำอวยพรไม่ได้ กรุณาลองอีกครั้งค่ะ';
+    retry.hidden = false;
+  } finally { clearTimeout(timer); }
+}
+document.getElementById('moreWishes').addEventListener('click', showMoreWishes);
+document.getElementById('retryWishes').addEventListener('click', loadPublicWishes);
+const wishesObserver = new IntersectionObserver(entries => {
+  if (entries.some(entry => entry.isIntersecting)) {
+    wishesObserver.disconnect();
+    loadPublicWishes();
+  }
+});
+wishesObserver.observe(document.getElementById('wishes'));
 </script>
 </body>
 </html>

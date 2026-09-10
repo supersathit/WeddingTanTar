@@ -11,6 +11,9 @@ function setup() {
   }
   ensureSheet_(book, 'RSVP', ['Request ID', 'วันที่ส่ง', 'ชื่อ–นามสกุล', 'การเข้าร่วม', 'จำนวนคน', 'ช่วงที่ร่วมงาน', 'คำอวยพร']);
   ensureSheet_(book, 'Slips', ['Request ID', 'วันที่ส่ง', 'ชื่อ–นามสกุล', 'ชื่อไฟล์', 'ลิงก์สลิป']);
+  book.getSheetByName('RSVP').getRange(1, 8).setValue('รหัสอ้างอิง');
+  book.getSheetByName('Slips').getRange(1, 6).setValue('รหัสอ้างอิง');
+  book.getSheetByName('RSVP').getRange(1, 9, 1, 2).setValues([['ยินยอมเผยแพร่', 'ชื่อที่แสดง']]);
 }
 
 function ensureSheet_(book, name, headers) {
@@ -60,10 +63,16 @@ function doPost(e) {
     if (!sheet) throw new Error('กรุณาตั้งค่าระบบก่อนใช้งาน');
     lock.waitLock(30000);
     locked = true;
-    if (sheet.getLastRow() > 1 && sheet.getRange(2, 1, sheet.getLastRow() - 1, 1)
-      .createTextFinder(data.requestId).matchEntireCell(true).findNext()) {
-      return json_({ok:true, requestId:data.requestId});
+    const receiptColumn = data.type === 'rsvp' ? 8 : 6;
+    const existing = sheet.getLastRow() > 1 && sheet.getRange(2, 1, sheet.getLastRow() - 1, 1)
+      .createTextFinder(data.requestId).matchEntireCell(true).findNext();
+    if (existing) {
+      const cell = sheet.getRange(existing.getRow(), receiptColumn);
+      let receiptId = String(cell.getValue() || '');
+      if (!receiptId) { receiptId = nextReceiptId_(props); cell.setValue(receiptId); }
+      return json_({ok:true, requestId:data.requestId, receiptId});
     }
+    const receiptId = nextReceiptId_(props);
     if (data.type === 'rsvp') {
       if (!['มา', 'ไม่มา'].includes(data.attend)) throw new Error('กรุณาเลือกการเข้าร่วมงาน');
       const attending = data.attend === 'มา';
@@ -71,7 +80,8 @@ function doPost(e) {
       if (attending && (!Number.isInteger(guests) || guests < 1 || guests > 20)) throw new Error('จำนวนผู้ร่วมงานต้องอยู่ระหว่าง 1–20 คน');
       if (attending && !['ทั้งวัน', 'พิธีเช้า', 'งานเลี้ยง'].includes(data.session)) throw new Error('กรุณาเลือกช่วงที่ร่วมงาน');
       sheet.appendRow([data.requestId, new Date(), name, data.attend, guests,
-        attending ? data.session : '', text_(data.wish, 3000, false)]);
+        attending ? data.session : '', text_(data.wish, 3000, false), receiptId,
+        data.publishWish === 'yes', data.publishWish === 'yes' ? text_(data.publicName, 80, true) : '']);
     } else {
       const extensions = {'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'application/pdf':'pdf'};
       if (!Object.prototype.hasOwnProperty.call(extensions, data.mimeType) || typeof data.base64 !== 'string') throw new Error('ชนิดไฟล์ไม่รองรับ');
@@ -83,25 +93,52 @@ function doPost(e) {
         : data.mimeType === 'application/pdf' ? String.fromCharCode.apply(null, head.slice(0, 5)) === '%PDF-'
         : String.fromCharCode.apply(null, head.slice(0, 4)) === 'RIFF' && String.fromCharCode.apply(null, head.slice(8, 12)) === 'WEBP';
       if (!valid) throw new Error('รูปแบบไฟล์ไม่ตรงกับชนิดไฟล์ที่เลือก');
-      const originalName = text_(data.fileName, 255, true);
+      text_(data.fileName, 255, true);
+      const safeName = String(data.name).trim().replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/g, '_');
+      const fileName = receiptId + '_' + safeName + '.' + extensions[data.mimeType];
       const folder = DriveApp.getFolderById(props.getProperty('SLIP_FOLDER_ID'));
-      const file = folder.createFile(Utilities.newBlob(bytes, data.mimeType, data.requestId + '.' + extensions[data.mimeType]));
+      const file = folder.createFile(Utilities.newBlob(bytes, data.mimeType, fileName));
       // Keep Drive files private; do not enable public-link sharing.
       try {
-        sheet.appendRow([data.requestId, new Date(), name, originalName, file.getUrl()]);
+        sheet.appendRow([data.requestId, new Date(), name, fileName, file.getUrl(), receiptId]);
       } catch (error) {
         file.setTrashed(true);
         throw error;
       }
     }
     SpreadsheetApp.flush();
-    return json_({ok:true, requestId:data.requestId});
+    return json_({ok:true, requestId:data.requestId, receiptId});
   } catch (error) {
     console.error(error);
     return json_({ok:false, message:'บันทึกไม่สำเร็จ กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง'});
   } finally {
     if (locked) lock.releaseLock();
   }
+}
+
+// Public endpoint: publish wishes immediately with explicit guest consent.
+function doGet(e) {
+  try {
+    if (!e || !e.parameter || e.parameter.action !== 'wishes') return json_({ok:false});
+    const book = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID'));
+    const sheet = book.getSheetByName('RSVP');
+    const rows = sheet && sheet.getLastRow() > 1 ? sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues() : [];
+    const enabled = value => value === true || value === 'TRUE';
+    const wishes = rows.filter(row => enabled(row[8]) && String(row[9] || '').trim() && String(row[6] || '').trim())
+      .reverse().slice(0, 60).map(row => ({name:String(row[9]), wish:String(row[6])}));
+    return json_({ok:true, wishes});
+  } catch (error) {
+    console.error(error);
+    return json_({ok:false, message:'โหลดคำอวยพรไม่สำเร็จ'});
+  }
+}
+
+// Called only while holding the script lock. Reserve IDs even if a write fails.
+function nextReceiptId_(props) {
+  const next = Number(props.getProperty('LAST_RECEIPT_ID') || 9999) + 1;
+  if (!Number.isInteger(next) || next < 10000 || next > 99999) throw new Error('รหัสอ้างอิงเต็มแล้ว');
+  props.setProperty('LAST_RECEIPT_ID', String(next));
+  return String(next);
 }
 
 function json_(data) {
